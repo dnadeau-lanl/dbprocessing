@@ -1,17 +1,17 @@
 #!/usr/bin/env python2.6
 
-import datetime
 import os
+import os.path
 import tempfile
 import unittest
 import subprocess
+import sys
 
-from dbprocessing import DBfile
+import dbp_testing
+dbp_testing.add_scripts_to_path()
+
 from dbprocessing import DButils
-from ..scripts import CreateDB
-
-filename = 'test_file.txt'
-
+import CreateDB
 
 
 class CreateDB(unittest.TestCase):
@@ -24,24 +24,18 @@ class CreateDB(unittest.TestCase):
         self.tfile.close()
         self.tfile = self.tfile.name
         os.remove(self.tfile)
-        subprocess.check_call( [ 'python', os.path.expanduser(os.path.join('~', 'dbUtils', 'CreateDB.py')), self.tfile ] )
+        subprocess.check_call([
+            sys.executable, os.path.abspath(os.path.join(
+                dbp_testing.testsdir, '..', 'scripts', 'CreateDB.py')),
+            self.tfile])
 
     def tearDown(self):
-        print('444444444')
         super(CreateDB, self).tearDown()
-        print('5555555555')
         os.remove(self.tfile)
-        print('666666666')
-
 
     def test1(self):
-        print('111111111')
         dbu = DButils.DButils(self.tfile)
-        print('222222222')
         del dbu
-        print('333333333')
-
-
 
 
 if __name__ == "__main__":

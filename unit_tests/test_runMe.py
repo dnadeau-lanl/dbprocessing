@@ -12,15 +12,13 @@ import shutil
 import tempfile
 import unittest
 
-#The log is opened on import, so need to quarantine the log directory
-#right away
-os.environ['DBPROCESSING_LOG_DIR'] = os.path.join(os.path.dirname(__file__),
-                                                  'unittestlogs')
+import dbp_testing
+
 import dbprocessing.DButils
 import dbprocessing.runMe
 
 
-class RunMeCmdArgTests(unittest.TestCase):
+class RunMeCmdArgTests(unittest.TestCase, dbp_testing.AddtoDBMixin):
     """Tests command, argument, and command line building"""
 
     def setUp(self):
@@ -237,6 +235,119 @@ class RunMeCmdArgTests(unittest.TestCase):
                          'rbspb_int_ect-mageis-L2_20130921_v3.0.1.cdf')
         ], rm.cmdline)
 
+    def testNoInputFiles(self):
+        """Check command line for a process with no input files"""
+        # Create a product to serve as the output of the process
+        prodid = self.addProduct(
+            product_name='triggered_output',
+            instrument_id=1,
+            format='trigger_{Y}{m}{d}_v{VERSION}.out',
+            level=2)
+        procid, codeid = self.addProcess('no_input', output_product_id=prodid)
+        # Fake the processqueue (None)
+        # Use no inputs
+        rm = dbprocessing.runMe.runMe(
+            self.dbu, datetime.date(2013, 9, 21), procid,
+            [], None, version_bump=None)
+        #Make sure this is runnable
+        self.assertTrue(rm.ableToRun)
+        #Components of the command line
+        self.assertEqual(['no_input_args'], rm.args)
+        self.assertEqual([], rm.extra_params)
+        self.assertEqual(
+            '/n/space_data/cda/rbsp/scripts/junk.py',
+            rm.codepath)
+        self.assertEqual(
+            'trigger_20130921_v1.0.0.out',
+            rm.filename)
+        #And now the command line itself
+        rm.make_command_line()
+        shutil.rmtree(rm.tempdir) #remove the dir made for the command
+        self.assertEqual([
+            '/n/space_data/cda/rbsp/scripts/junk.py',
+            'no_input_args',
+            os.path.join(rm.tempdir,
+                         'trigger_20130921_v1.0.0.out')
+        ], rm.cmdline)
+
+    def testNoInputOutputExist(self):
+        """Check command line for a process with no input, output exists"""
+        # Create a product to serve as the output of the process
+        prodid = self.addProduct(
+            product_name='triggered_output',
+            instrument_id=1,
+            format='trigger_{Y}{m}{d}_v{VERSION}.out',
+            level=2)
+        procid, codeid = self.addProcess('no_input', output_product_id=prodid)
+        fid = self.addFile('trigger_20130921_v1.0.0.out', prodid)
+        self.dbu.addFilecodelink(fid, codeid)
+        rm = dbprocessing.runMe.runMe(
+            self.dbu, datetime.date(2013, 9, 21), procid,
+            [], None, version_bump=None)
+        # Make sure this is runnable
+        self.assertTrue(rm.ableToRun)
+        # And now the command line itself
+        rm.make_command_line()
+        shutil.rmtree(rm.tempdir) #remove the dir made for the command
+        # Version bump not requested, so it would conflict
+        self.assertEqual([
+            '/n/space_data/cda/rbsp/scripts/junk.py',
+            'no_input_args',
+            os.path.join(rm.tempdir,
+                         'trigger_20130921_v1.0.0.out')
+        ], rm.cmdline)
+        # Same thing with version bump
+        rm = dbprocessing.runMe.runMe(
+            self.dbu, datetime.date(2013, 9, 21), procid,
+            [], None, version_bump=1)
+        # Make sure this is runnable
+        self.assertTrue(rm.ableToRun)
+        rm.make_command_line()
+        shutil.rmtree(rm.tempdir)
+        self.assertEqual([
+            '/n/space_data/cda/rbsp/scripts/junk.py',
+            'no_input_args',
+            os.path.join(rm.tempdir,
+                         'trigger_20130921_v1.1.0.out')
+        ], rm.cmdline)
+
+    def testNoInputUpdateCode(self):
+        """Process with no input, output exists, code has been updated"""
+        prodid = self.addProduct(
+            product_name='triggered_output',
+            instrument_id=1,
+            format='trigger_{Y}{m}{d}_v{VERSION}.out',
+            level=2)
+        procid, codeid = self.addProcess('no_input', output_product_id=prodid)
+        fid = self.addFile('trigger_20130921_v1.0.0.out', prodid)
+        self.dbu.addFilecodelink(fid, codeid)
+        # Meet the new code, same as the old code
+        oldcode = self.dbu.getEntry('Code', codeid)
+        newcode = self.dbu.Code()
+        for k in dir(newcode):
+            if not k.startswith('_'):
+                setattr(newcode, k, getattr(oldcode, k))
+        newcode.code_id = None
+        newcode.filename = 'new_junk.py'
+        newcode.quality_version = 1
+        self.dbu.session.add(newcode)
+        self.dbu.commitDB()
+        # Old code no longer active
+        self.dbu.updateCodeNewestVersion(codeid)
+        # Now see if runnable (with a version bump)
+        rm = dbprocessing.runMe.runMe(
+            self.dbu, datetime.date(2013, 9, 21), procid,
+            [], None, version_bump=1)
+        # Make sure this is runnable
+        self.assertTrue(rm.ableToRun)
+        rm.make_command_line()
+        shutil.rmtree(rm.tempdir)
+        self.assertEqual([
+            '/n/space_data/cda/rbsp/scripts/new_junk.py',
+            'no_input_args',
+            os.path.join(rm.tempdir,
+                         'trigger_20130921_v1.1.0.out')
+        ], rm.cmdline)
 
 
 if __name__ == '__main__':

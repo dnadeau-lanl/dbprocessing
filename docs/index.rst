@@ -3,9 +3,14 @@ dbprocessing
 .. toctree::
    :maxdepth: 1
 
-   developer
+   README
+   developer/index
    scripts
    ConfigurationFiles
+   CODE_OF_CONDUCT
+   LICENSE
+   COPYRIGHT
+   CONTRIBUTORS
 
 API documentation
 -----------------
