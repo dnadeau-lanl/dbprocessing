@@ -270,6 +270,7 @@ def runner(runme_list, dbu, MAX_PROC=20, rundir=None):
                     _start_a_run(runme)
 
                 args = shlex.split(' '.join(runme.cmdline))
+                print(' '.join(runme.cmdline))
                 proc = subprocess.Popen(args, stdout=fp, stderr=fp)
                 processes[proc] = (runme, time.time(), fp )
                 #...

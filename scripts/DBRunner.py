@@ -8,6 +8,7 @@ import traceback
 import subprocess
 
 import dateutil.parser as dup
+import spacepy.toolbox as tb
 
 from dbprocessing import dbprocessing
 from dbprocessing.runMe import ProcessException
@@ -20,21 +21,8 @@ THis primarily used in testing can also be used to reprocess files as needed
 
 """
 
-def parse_args(argv=None):
-    """Parse arguments for this script
 
-    Parameters
-    ==========
-    argv : list
-        Argument list, default from sys.argv
-
-    Returns
-    =======
-    args : list
-        positional arguments from command line
-    options : optparse.Values
-        Arguments to command line flags
-    """
+if __name__ == "__main__":
     usage = \
     """
     Usage: %prog -m db process_id
@@ -57,48 +45,28 @@ def parse_args(argv=None):
     parser.add_option("-n", "--num-proc", dest="numproc", type='int',
                       help="Number of processes to run in parallel", default=1)
 
-    (options, args) = parser.parse_args(argv)
+    (options, args) = parser.parse_args()
     if len(args) != 1:
         parser.error("incorrect number of arguments")
 
     if options.startDate is not None:
-        options.startDate = dup.parse(options.startDate)
+        startDate = dup.parse(options.startDate)
     else:
-        options.startDate = datetime.datetime(2012, 8, 30)
+        startDate = datetime.datetime(2012, 8, 30)
     if options.endDate is not None:
-        options.endDate = dup.parse(options.endDate)
+        endDate = dup.parse(options.endDate)
     else:
-        options.endDate = datetime.datetime.now()
+        endDate = datetime.datetime.now()
 
-    if options.endDate < options.startDate:
+    if endDate < startDate:
         parser.error("endDate must be >= to startDate")
-    return args, options
 
+    pq = dbprocessing.ProcessQueue(options.mission, dryrun=options.dryrun, echo=options.echo)
 
-def calc_runme(pq, startDate, endDate, inproc):
-    """Find all processes that can be run given the inputs
+    dates = Utils.expandDates(startDate, endDate)
+    print('dates', list(dates))
 
-    Parameters
-    ==========
-    pq : dbprocessing.dbprocessing.ProcessQueue
-        Process queue to use in calculation
-    startDate : datetime.datetime
-        First date to process (inclusive)
-    endDate : datetime.datetime
-        Last date to process (inclusive)
-    inproc : int
-        Process ID to run
-
-    Returns
-    =======
-    runme : list
-        All commands that can be run.
-    """
-    dates = [Utils.datetimeToDate(d)
-             for d in Utils.expandDates(startDate, endDate)]
-    print('dates', dates)
-
-    timebase = pq.dbu.getProcessTimebase(inproc)
+    inproc = args[0]
 
     # get the input products for a process
     products = pq.dbu.getInputProductID(inproc)
@@ -112,27 +80,25 @@ def calc_runme(pq, startDate, endDate, inproc):
         for p, opt in products:
             prod_ = pq.dbu.getEntry('Product', p)
             print("    Processing product: {0} : {1}".format((p,opt), prod_.product_name))
-            filegetter = pq.dbu.getFilesByProductTime \
-                         if timebase in ('DAILY',) \
-                         else pq.dbu.getFilesByProductDate
-            files = filegetter(p, [d]*2, newest_version=True)
-            fnames = [v.filename for v in files]
+            files = pq.dbu.getFilesByProductDate(p, [d]*2, newest_version=True)
+            if files:
+                fnames = [v.filename for v in files]
+            else:
+                fnames = []
             print("        Found files: {0}".format(list(fnames)))
 
-            input_files.extend([v.file_id for v in files])
+            #files = [v.file_id for v in files]
+            if files:
+                input_files.extend([v.file_id for v in files])
+            if not files:
+                print("No process to run for {0}".format(d.isoformat()))
+                continue
+            #files, input_prods = pq._getRequiredProducts(inproc, files[0].filename, d)
         if not input_files:
             print("No files to run for process ({0}) {1} on {2}".format(inproc,
                                                                       pq.dbu.getEntry('Process', inproc).process_name,
                                                                       d.isoformat()))
         else:
             runme.append(runMe.runMe(pq.dbu, d, inproc, input_files, pq, force=True))
-    return runme
-
-
-if __name__ == "__main__":
-    args, options = parse_args()
-    inproc = args[0]
-    pq = dbprocessing.ProcessQueue(options.mission, dryrun=options.dryrun, echo=options.echo)
-    runme = calc_runme(pq, options.startDate, options.endDate, inproc)
     runMe.runner(runme, pq.dbu, MAX_PROC=options.numproc, rundir='.')
                 

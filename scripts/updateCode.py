@@ -20,6 +20,8 @@ from sqlalchemy.orm.exc import NoResultFound
 if __name__ == "__main__":
     usage = "usage: %prog [options] -m mission_db code_id newversion newname"
     parser = OptionParser(usage=usage)
+    parser.add_option("-i", "--instrument", dest="instrument", type="string",
+                      help="instrument to connect to", default='sage')
     parser.add_option("-m", "--mission", dest="mission", type="string",
                       help="mission to connect to", default='~ectsoc/RBSP_processing.sqlite')
 
@@ -27,6 +29,8 @@ if __name__ == "__main__":
     if len(args) != 3:
         parser.error("incorrect number of arguments")
 
+    import pdb
+    pdb.set_trace()
     try:
         version = Version.Version.fromString(args[1])
     except ValueError:
@@ -40,7 +44,7 @@ if __name__ == "__main__":
 
     newname = args[2]
     
-    dbu = DButils.DButils(os.path.expanduser(options.mission))
+    dbu = DButils.DButils(os.path.expanduser(options.mission), options.instrument)
 
     try:
         code = dbu.getEntry('Code', code_id)
@@ -56,21 +60,22 @@ if __name__ == "__main__":
     attrs = [ u'active_code',
               u'arguments',
               u'code_description',
-              # u'code_id',
+              #u'code_id',
               u'code_start_date',
               u'code_stop_date',
               u'cpu',
               u'date_written',
-              # u'filename',
-              #u'interface_version',
-              #u'newest_version',
+              u'filename',
+              u'interface_version',
+              u'newest_version',
               u'output_interface_version',
               u'process_id',
-              #u'quality_version',
+              u'quality_version',
               u'ram',
               u'relative_path',
-              #u'revision_version',
+              u'revision_version',
               u'shasum']
+
 
     code2 = dbu.Code()
     for attr in attrs:
@@ -84,6 +89,6 @@ if __name__ == "__main__":
     code2.filename = newname
     code2.newest_version = True
     dbu.session.add(code2)
-    code.newest_version = False
+#    code.newest_version = False
     dbu.session.add(code)
     dbu.session.commit()

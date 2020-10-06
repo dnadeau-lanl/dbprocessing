@@ -58,8 +58,6 @@ def readconfig(config_filepath):
     cfg = ConfigParser.SafeConfigParser()
     cfg.read(config_filepath)
     sections = cfg.sections()
-    import pdb
-    pdb.set_trace()
     # Read each parameter in turn
     ans = { }
     for section in sections:
@@ -183,8 +181,6 @@ def addStuff(cfg, options, instrument):
     # is the mission in the DB?  If not add it
     if cfg['mission']['mission_name'] not in dbu.getMissions():  # was it there?
         # add it
-        import pdb
-        pdb.set_trace()
         mission_id = dbu.addMission(**cfg['mission'])
         print('Added Mission: {0} {1}'.format(mission_id, dbu.getEntry('Mission', mission_id).mission_name))
     else:
@@ -219,8 +215,6 @@ def addStuff(cfg, options, instrument):
 
     # loop over all the products, check if they are there and add them if not
     products = [k for k in cfg if k.startswith('product')]
-    import pdb
-    pdb.set_trace()
     db_products = [v.product_name for v in dbu.getAllProducts()]
     for p in products:
         # is the product in the DB?  If not add it
@@ -281,8 +275,6 @@ def addStuff(cfg, options, instrument):
             # if the process was not there we will assume the code is not either (requires a process_id)
             tmp = dict((k, cfg[p][k]) for k in cfg[p] if k.startswith('code'))
 
-            import pdb
-            pdb.set_trace()
             replace_dict = { 'code_filename': 'filename',
                              'code_arguments': 'arguments',
                              'code_relative_path': 'relative_path',
@@ -353,8 +345,6 @@ if __name__ == "__main__":
         # shutil.copy(orig_db, tmp_db.name)
         # options.mission = tmp_db.name
         try:
-            import pdb
-            pdb.set_trace()
             addStuff(conf, options, INSTRUMENT)
             # shutil.copy(tmp_db.name, orig_db)
         finally:

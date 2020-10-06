@@ -249,6 +249,7 @@ class ProcessQueue(object):
             if arg is not None:
                 kwargs = strargs_to_args(arg)
                 try:
+                    # print("filename = %s\n" % filename)
                     df = inspect.Inspector(filename, self.dbu, product, **kwargs)
                 except:
                     exc_type, exc_value, exc_traceback = sys.exc_info()
