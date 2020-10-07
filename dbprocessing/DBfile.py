@@ -1,13 +1,13 @@
+from __future__ import absolute_import
 from __future__ import print_function
 
 import os
 import shutil
 import tarfile
 
-import DBlogging
-import Diskfile
-import Utils
-
+from . import DBlogging
+from . import Diskfile
+from . import Utils
 
 class DBfileError(Exception):
     """Exception that is raised by DBfile class"""
@@ -36,8 +36,8 @@ class DBfile(object):
         """
         if makeDiskFile:
             diskfile = Diskfile.Diskfile(diskfile, dbu)
-        #if not isinstance(diskfile, Diskfile.Diskfile):
-        #    raise DBfileError('Wrong input, must input a Diskfile object')
+        if not isinstance(diskfile, Diskfile.Diskfile):
+            raise DBfileError('Wrong input, must input a Diskfile object')
 
         self.dbu = dbu
         self.diskfile = diskfile
@@ -88,7 +88,7 @@ class DBfile(object):
 
         """
         path = self.getDirectory()
-        ## need to do path replacements
+        # need to do path replacements
         path = Utils.dirSubs(path, self.diskfile.params['filename'], self.diskfile.params['utc_file_date'],
                              self.diskfile.params['utc_start_time'], '{0}'.format(str(self.diskfile.params['version'])), dbu=self.dbu)
 
@@ -100,12 +100,15 @@ class DBfile(object):
                 "file {0} was a link, it was added and removed".format(os.path.basename(self.diskfile.infile)))
         else:
             try:
-                shutil.move(self.diskfile.infile, os.path.join(path, self.diskfile.params['filename']))
+                shutil.move(self.diskfile.infile, os.path.join(
+                    path, self.diskfile.params['filename']))
             except IOError:
                 dirname = os.path.split(os.path.join(path, self.diskfile.params['filename']))[0]
                 os.makedirs(dirname)
-                DBlogging.dblogger.warning("created a directory to put the date into: {0}".format(dirname))
-                shutil.move(self.diskfile.infile, os.path.join(path, self.diskfile.params['filename']))
+                DBlogging.dblogger.warning(
+                    "created a directory to put the date into: {0}".format(dirname))
+                shutil.move(self.diskfile.infile, os.path.join(
+                    path, self.diskfile.params['filename']))
             DBlogging.dblogger.info("file {0} moved to {1}".format(os.path.basename(self.diskfile.infile),
                                                                    os.path.dirname(os.path.join(path,
                                                                                                 self.diskfile.params[

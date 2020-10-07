@@ -22,7 +22,7 @@ except NameError:
 if('DBPROCESSING_LOG_DIR' in os.environ):
     log_dir = os.environ['DBPROCESSING_LOG_DIR']
 else:
-    log_dir = os.path.join('/projects/sdnprod/', 'dbprocessing_logs')
+    log_dir = os.path.join('~.', 'dbprocessing_logs')
 log_dir = os.path.expanduser(log_dir)
 if not os.path.isdir(log_dir):
     os.makedirs(log_dir)

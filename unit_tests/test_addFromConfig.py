@@ -57,7 +57,10 @@ class addFromConfig(unittest.TestCase):
             'mission': {
                 'incoming_dir': 'L0',
                 'rootdir': '/home/myles/dbprocessing/test_DB',
-                'mission_name': 'testDB'},
+                'mission_name': 'testDB',
+                'codedir': '/home/myles/dbprocessing/test_DB',
+                'inspectordir': '/home/myles/dbprocessing/test_DB',
+                'errordir': '/home/myles/dbprocessing/test_DB'},
             'instrument': {'instrument_name': 'rot13'},
             'process_rot13_L1-L2': {'code_cpu': '1',
                 'code_start_date': '2010-09-01',

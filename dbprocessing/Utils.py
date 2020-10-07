@@ -13,14 +13,14 @@ import sys
 
 import dateutil.rrule  # do this long so where it is from is remembered
 
-import Version
+from . import Version
 
 
 def datetimeToDate(dt):
     """
-    given an input datetime.datetime or datetime.date return a datetime.date 
-    
-    :param dt: input to convert 
+    given an input datetime.datetime or datetime.date return a datetime.date
+
+    :param dt: input to convert
     :type dt: datetime.datetime or datetime.date
     :return: datetime.date
     :rtype: datetime.date
@@ -81,7 +81,8 @@ def progressbar(count, blocksize, totalsize, text='Download Progress'):
 
     percent = int(count * blocksize * 100 / totalsize)
     sys.stdout.write("\r" + text + " " + "...%d%%" % percent)
-    if percent == 100: print('\n')
+    if percent == 100:
+        print('\n')
     sys.stdout.flush()
 
 
@@ -153,7 +154,7 @@ def parseDate(inval):
     """
     Given a date of the for yyyy-mm-dd parse to a datetime.
     This is just a wrapper around datetime.datetime.strptime
-    If the format is wrong ValueError is raised. 
+    If the format is wrong ValueError is raised.
 
     :param inval: String date representation of the form YYYY-MM-DD
     :type inval: str
@@ -216,7 +217,7 @@ def toNone(value):
 
     :param value: Value to evaluate if none
     :type value: any
-    
+
     :rtype: None or same type as value
     """
     if value in [None, '', 'None', 'none', 'NONE']:
@@ -238,7 +239,7 @@ def strargs_to_args(strargs):
 
     if strargs is None:
         return None
-    kwargs = { }
+    kwargs = {}
     if isinstance(strargs, (list, tuple)):  # we have multiple to deal with
         # TODO why was this needed?
         if len(strargs) == 1:
@@ -267,9 +268,9 @@ def dirSubs(path, filename, utc_file_date, utc_start_time, version, dbu=None):
 
     .. note::
         Valid subsitutions are:
-            * Y: 4 digit year   
-            * m: 2 digit month  
-            * b: 3 character month (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)  
+            * Y: 4 digit year
+            * m: 2 digit month
+            * b: 3 character month (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)
             * d: 2 digit day
             * y: 2 digit year
             * j: 3 digit day of year
@@ -281,7 +282,7 @@ def dirSubs(path, filename, utc_file_date, utc_start_time, version, dbu=None):
             * MISSION: the mission name from the db
             * SPACECRAFT: the spacecraft name from the db
             * PRODUCT: the product name from the db
-    
+
     :param path: Path to the file
     :type path: str
 
@@ -313,7 +314,7 @@ def dirSubs(path, filename, utc_file_date, utc_start_time, version, dbu=None):
         if '{PRODUCT}' in path:
             path = path.replace('{PRODUCT}', ftb['product'].product_name)
         if '{IRON}' in path:
-            iron=filename.split('.')[0]
+            iron = filename.split('.')[0]
             path = path.replace('{IRON}', iron.split('-')[1])
 
     if '{Y}' in path:
@@ -323,8 +324,8 @@ def dirSubs(path, filename, utc_file_date, utc_start_time, version, dbu=None):
     if '{d}' in path:
         path = path.replace('{d}', utc_file_date.strftime('%d'))
     if '{b}' in path:
-        months = { 1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Oct',
-                   11: 'Nov', 12: 'Dec' }
+        months = {1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Oct',
+                  11: 'Nov', 12: 'Dec'}
         path = path.replace('{b}', months[utc_file_date.month])
     if '{y}' in path:
         path = path.replace('{y}', utc_file_date.strftime('%y'))
@@ -352,8 +353,8 @@ def split_code_args(args):
 
     This is different thatn just split() since we have to keep options
     together with the flags
-    
-    
+
+
     :example:
 
     >>> split_code_args("code -n hello outfile")
@@ -401,7 +402,7 @@ def readconfig(config_filepath):
     cfg.read(config_filepath)
     sections = cfg.sections()
     # Read each parameter in turn
-    ans = { }
+    ans = {}
     for section in sections:
         ans[section] = dict(cfg.items(section))
     return ans

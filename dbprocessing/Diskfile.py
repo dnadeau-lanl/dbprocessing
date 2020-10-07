@@ -6,14 +6,17 @@ import glob
 import hashlib
 import os
 
-import DBlogging
+from . import DBlogging
 
 # .. todo look at the logging  of these and fix it, broke the messages printed out, probably because Exception __init__isn't called
+
+
 class ReadError(Exception):
     """
     Exception that a file is not readable by the script, probably doesn't exist
 
     """
+
     def __init__(self, *params):
         super(ReadError, self).__init__(*params)
         DBlogging.dblogger.error("ReadError raised")
@@ -24,6 +27,7 @@ class FilenameError(Exception):
     Exception especially for created filenames showing that they are wrong
 
     """
+
     def __init__(self, *params):
         super(FilenameError, self).__init__(*params)
         DBlogging.dblogger.error("FilenameError raised")
@@ -34,16 +38,18 @@ class WriteError(Exception):
     Exception that a file is not write able by the script, probably doesn't exist or in a ro directory
 
     """
+
     def __init__(self, *params):
         super(WriteError, self).__init__(*params)
         DBlogging.dblogger.error("WriteError raised")
 
-        
+
 class InputError(Exception):
     """
     Exception that input is bad to the DiskFile class
 
     """
+
     def __init__(self, *params):
         super(InputError, self).__init__(*params)
         DBlogging.dblogger.error("InputError raised")
@@ -56,6 +62,7 @@ class DigestError(Exception):
     .. note: maybe just combine this with ReadError for the current purpose
 
     """
+
     def __init__(self, *params):
         super(DigestError, self).__init__(*params)
         DBlogging.dblogger.error("DigestError raised")
@@ -72,7 +79,7 @@ class Diskfile(object):
         """
         setup a Diskfile class, takes in a filename and creates a params dict to hold information about the file
         then tests to see what mission the file is from
-        
+
         :param infile: a file to create a Diskfile around
         :type infile: str
         :param dbu: pass in the current session so that a new connection is not made
@@ -107,7 +114,6 @@ class Diskfile(object):
         self.dbu = dbu
         self.mission = self.dbu.mission  # keeps track if we found a parsematch
 
-
     def __repr__(self):
         return "<Diskfile.Diskfile object: {0}>".format(self.infile)
 
@@ -129,7 +135,8 @@ class Diskfile(object):
         self.WRITE_ACCESS = os.access(self.infile, os.W_OK) | os.path.islink(self.infile)
         if not self.WRITE_ACCESS:
             DBlogging.dblogger.debug("{0} write access denied!".format(self.infile))
-            raise(WriteError("file is not writeable, won't be able to move it to proper location: {0}".format(self.infile)))
+            raise(WriteError(
+                "file is not writeable, won't be able to move it to proper location: {0}".format(self.infile)))
 #        DBlogging.dblogger.debug("{0} Access Checked out OK".format(self.infile))
 
 
@@ -149,7 +156,7 @@ def calcDigest(infile):
             m.update(f.read())
     except IOError:
         raise(DigestError("File not found: {0}".format(infile)))
-        
+
     DBlogging.dblogger.debug("digest calculated: {0}, file: {1} ".format(m.hexdigest(), infile))
 
     return m.hexdigest()

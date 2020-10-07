@@ -12,17 +12,18 @@ from dbprocessing import DButils
 from dbprocessing import Diskfile
 from dbprocessing import Version
 
+
 class DBfileTests(unittest.TestCase):
     """Tests for DBfile class"""
-    
+
     def setUp(self):
         super(DBfileTests, self).setUp()
         self.tempD = tempfile.mkdtemp()
         copy_tree(os.path.dirname(__file__) + '/../functional_test/', self.tempD)
         copy_tree(os.path.dirname(__file__) + '/tars/', self.tempD)
 
-        self.dbu = DButils.DButils(self.tempD + '/testDB.sqlite')
-        #Update the mission path to the tmp dir
+        self.dbu = DButils.DButils(self.tempD + '/testDB.sqlite', engine="sqlite")
+        # Update the mission path to the tmp dir
         self.dbu.getEntry('Mission', 1).rootdir = self.tempD
         self.dbu.commitDB()
         self.dbu.MissionDirectory = self.dbu.getMissionDirectory()
@@ -46,7 +47,8 @@ class DBfileTests(unittest.TestCase):
         return dbf
 
     def test_invalidInput(self):
-        self.assertRaises(DBfile.DBfileError, DBfile.DBfile, self.tempD + '/L0/testDB_000_000.raw', self.dbu)
+        self.assertRaises(DBfile.DBfileError, DBfile.DBfile,
+                          self.tempD + '/L0/testDB_000_000.raw', self.dbu)
 
     def test_repr(self):
         dbf = DBfile.DBfile(self.tempD + '/L0/testDB_000_000.raw', self.dbu, makeDiskFile=True)
@@ -54,12 +56,12 @@ class DBfileTests(unittest.TestCase):
 
     def test_getDirectory(self):
         dbf = DBfile.DBfile(self.tempD + '/L0/testDB_000_000.raw', self.dbu, makeDiskFile=True)
-        
-        #Fails because product_id is not set
-        self.assertRaises(DBfile.DBfileError, dbf.getDirectory )
+
+        # Fails because product_id is not set
+        self.assertRaises(DBfile.DBfileError, dbf.getDirectory)
 
         dbf.diskfile.params['product_id'] = 4
-        self.assertEqual( self.tempD + '/L0', dbf.getDirectory() )
+        self.assertEqual(self.tempD + '/L0', dbf.getDirectory())
 
     def test_addFileToDB(self):
         with open(self.tempD + '/file.file', 'w') as fp:

@@ -277,7 +277,7 @@ class dbprocessing_db(object):
                                   )
 
         # TODO move this out so that the user chooses the db type
-        engine = create_engine('postgres:///' + self.filename, echo=False)
+        engine = create_engine('sqlite:///' + self.filename, echo=False)
         metadata.bind = engine
 
         metadata.create_all(checkfirst=True)
