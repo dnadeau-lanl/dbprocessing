@@ -439,14 +439,16 @@ class runMe(object):
                 if codechange: # if the code did change maybe we have a unique
                     DBlogging.dblogger.debug("Code did change for file: {0}".format(self.filename))
                     continue
-                parentchange = self._parentsChanged(f_id_db)
-                if parentchange is None: # this is an inconsistency mark it and move on
-                    DBlogging.dblogger.info("Parent was None for file: {0}".format(self.filename))
-                    break
-                if parentchange:
-                    DBlogging.dblogger.debug("Parent did change for file: {0}".format(self.filename))
-                    continue
-                # Need to check for version_bump in the processqueue
+
+                if self.input_files: # Parent check only if process takes input
+                    parentchange = self._parentsChanged(f_id_db)
+                    if parentchange is None: # this is an inconsistency mark it and move on
+                        DBlogging.dblogger.info("Parent was None for file: {0}".format(self.filename))
+                        break
+                    if parentchange:
+                        DBlogging.dblogger.debug("Parent did change for file: {0}".format(self.filename))
+                        continue
+
                 DBlogging.dblogger.debug("Jumping out of runme, not going to run anything".format())
 
                 return # if we get here then we are not going to run anything

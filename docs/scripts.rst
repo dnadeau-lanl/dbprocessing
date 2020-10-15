@@ -95,20 +95,66 @@ Show files in database but not on disk. Additionally, this can remove files from
 .. option:: --startID The File id to start on
 .. option:: -v, --verbose Print out each file as it is checked
 
-DBRunner.py:
-------------
-.. program:: DBRunner
+DBRunner.py
+-----------
+.. program:: DBRunner.py
 
 Used to demo run codes for certain dates out of the database. This primarily used in testing can also be used to reprocess files as needed
 
-.. option:: filename The filename to save the config
-.. option:: -d, --dryrun Only print what would be done
-.. option:: -m <dbname>, --mission <dbname> Selected mission database
-.. option:: --echo Start sqlalchemy with echo in place for debugging
-.. option:: -s <date>, --startDate <date> Date to start search (e.g. 2012-10-02 or 20121002)
-.. option:: -e <date>, --endDate <date> Date to end search (e.g. 2012-10-25 or 20121025)
-.. option:: --nooptional Do not include optional inputs
-.. option:: -n, --num-proc Number of processes to run in parallel
+As is typical, processes for which there are no input files for a date will
+not be run. However, if a process has no input *products*, dates specified
+will be run, depending on the values of :option:`--force` and
+:option:`--update`. This is unlike `ProcessQueue.py`_, which has no way of
+triggering such processing.
+
+.. option:: process_id
+
+   Process ID or process name of process to run.
+
+.. option:: -d, --dryrun
+
+   Only print what would be done (not currently working).
+
+.. option:: -m <dbname>, --mission <dbname>
+
+   Selected mission database
+
+.. option:: --echo
+
+   Start sqlalchemy with echo in place for debugging
+
+.. option:: -s <date>, --startDate <date>
+
+   Date to start search (e.g. 2012-10-02 or 20121002)
+
+.. option:: -e <date>, --endDate <date>
+
+   Date to end search (e.g. 2012-10-25 or 20121025)
+
+.. option:: --nooptional
+
+   Do not include optional inputs
+
+.. option:: -n, --num-proc
+
+   Number of processes to run in parallel
+
+.. option:: -i, --ingest
+
+   Ingest created files into the database. This will also add them to the
+   process queue, to be built into further products by ProcessQueue -p.
+   (Default: create in current directory and do not add to database.)
+
+.. option:: -u, --update
+
+   Only run files that have not yet been created or with updated codes.
+   Mutually exclusive with --force, -v. (Default: run all.)
+
+.. option:: --force {0,1,2}
+
+   Run all files in given date range and always increment version
+   (0: interface; 1: quality; 2: revision). Mutually exclusive with -u, -v.
+   (Default: run all but do not increment version.)
 
 deleteAllDBFiles.py:
 --------------------
@@ -187,6 +233,26 @@ In a given directory, make symlinks to all the newest versions of files into ano
 
 .. warning:: There's no documentation on the config file
 
+MigrateDB.py
+------------
+.. program:: MigrateDB.py
+
+Migrate a database to the latest structure.
+
+Right now this only adds a Unix time table that stores the UTC start/end
+time as seconds since Unix epoch, but planned to extend to support all
+other database changes to date.
+
+Will display all possible changes and prompt for confirmation.
+
+.. option:: -m <dbname>, --mission <dbname>
+
+   Selected mission database
+
+.. option:: -y, --yes
+
+   Process possible changes without asking for confirmation.
+
 missingFilesByProduct.py:
 -------------------------
 Attempt to reprocess files that are missing, 90% solution, not used much, but did work
@@ -230,8 +296,8 @@ Prints the process queue.
 .. option:: -o, --output The name of the file to output to(if blank, print to stdout)
 .. option:: --html Output in HTML
 
-ProcessQueue.py:
-----------------
+ProcessQueue.py
+---------------
 .. program:: ProcessQueue
 
 The main thing

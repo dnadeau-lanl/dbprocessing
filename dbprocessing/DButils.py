@@ -5,7 +5,11 @@ import collections
 import datetime
 import glob
 import itertools
+<<<<<<< HEAD
 import os
+=======
+import math
+>>>>>>> upstream/master
 import os.path
 import subprocess
 import pwd
@@ -1647,6 +1651,19 @@ class DButils(object):
             d1.newest_version = False
 
         self.session.add(d1)
+        if hasattr(self, 'Unixtime'):
+            # Populate file_id, but still allow rollback of file insert
+            self.session.flush()
+            unx0 = datetime.datetime(1970, 1, 1)
+            r = self.Unixtime()
+            r.file_id = d1.file_id
+            r.unix_start = None if utc_start_time is None \
+                           else int((utc_start_time - unx0)\
+                                    .total_seconds()) # Round down
+            r.unix_stop = None if utc_stop_time is None\
+                          else int(math.ceil((utc_stop_time - unx0)\
+                                             .total_seconds())) # Round up
+            self.session.add(r)
         self.commitDB()
         return d1.file_id
 
@@ -1916,7 +1933,22 @@ class DButils(object):
         # if a datetime.datetime comes in this does not work, make them datetime.date
         startDate = Utils.datetimeToDate(startDate)
         endDate = Utils.datetimeToDate(endDate)
+<<<<<<< HEAD
 
+=======
+        unixtime = hasattr(self, 'Unixtime')
+        if startTime is not None:
+            startTime = Utils.toDatetime(startTime)
+            if unixtime:
+                startTime = (startTime - datetime.datetime(1970, 1, 1))\
+                            .total_seconds()
+        if endTime is not None:
+            endTime = Utils.toDatetime(endTime, end=True)
+            if unixtime:
+                endTime = (endTime - datetime.datetime(1970, 1, 1))\
+                          .total_seconds()
+        
+>>>>>>> upstream/master
         files = self.session.query(self.File)
 
         if product is not None:
@@ -1946,10 +1978,14 @@ class DButils(object):
         elif endDate is not None: # End date only
             files = files.filter(self.File.utc_file_date <= endDate)
 
+        if unixtime and (startTime is not None or endTime is not None):
+            files = files.join(self.Unixtime)
         if startTime is not None:
-            files = files.filter(self.File.utc_stop_time >= Utils.toDatetime(startTime))
+            files = files.filter((self.Unixtime.unix_stop if unixtime
+                                  else self.File.utc_stop_time) >= startTime)
         if endTime is not None:
-            files = files.filter(self.File.utc_start_time <= Utils.toDatetime(endTime, end=True))
+            files = files.filter((self.Unixtime.unix_start if unixtime
+                                  else self.File.utc_start_time) <= endTime)
 
         if newest_version:
             files = files.order_by(self.File.interface_version, self.File.quality_version, self.File.revision_version)
@@ -2711,3 +2747,219 @@ class DButils(object):
         for p in prods:
             tree.append([p.product_id, self.getChildTree(p.product_id)])
         return tree
+<<<<<<< HEAD
+=======
+
+    def updateCodeNewestVersion(self, code_id, is_newest=False):
+        """
+        Update a code to indicate whether it's the newest version.
+
+        Assumption is that the newest version of a code should be the
+        only active one, so sets both ``newest_version`` and
+        ``active_code`` fields in the database.
+
+        :param int code_id: ID or filename (str) of the code to change.
+        :param bool is_newest: Set to newest (True) or not-newest, inactive
+                               (False, default).
+        """
+        DBlogging.dblogger.debug\
+            ("Entered updateCodeNewestVersion: code_id={0}, is_newest={1}"\
+             .format(code_id, is_newest))
+        code = self.getEntry('Code', code_id)
+        code.newest_version = code.active_code = int(bool(is_newest))
+        self.commitDB()
+
+    def editTable(self, table, my_id, column, my_str=None, after_flag=None,
+                  ins_after=None, ins_before=None, replace_str=None,
+                  combine=False):
+        """
+        Apply string editing operations on a single row, column of a table
+
+        For a specified row and column of a table, update the value according
+        to operations specified by the combination of the kwargs.
+
+        To replace all instances of a string with another, set
+        ``replace_str`` to the string to replace and ``my_str`` to the
+        new value to replace it with.
+
+        To append a string to all instance of a string, set ``ins_after``
+        to the existing string and ``my_str`` to the value to append.
+
+        To prepend a string to all instance of a string, set ``ins_after``
+        to the existing string and ``my_str`` to the value to prepend.
+
+        When operating on the ``arguments`` column of the ``code`` table,
+        and ``after_flag`` is specified, all three of these operations
+        will only apply to the "word" (whitespace-separated) after the
+        "word" in ``after_flag``. See examples.
+
+        When operating on the ``arguments`` column of the ``code`` table,
+        ``combine`` may be set to ``True`` to combine every word that
+        follows each instance of ``after_flag`` into a comma-separated list
+        after a single instance of ``after_flag``. See examples.
+
+        One and only one of ``ins_after``, ``ins_before``, ``replace_str``
+        and ``combine`` can be specified; there is no default operation. If
+        ``ins_after``, ``ins_before``, or ``replace_str`` are specified,
+        ``my_str`` must be.
+
+        .. note:: Written and tested for code table. Not thoroughly
+                  tested for others.
+        
+        :param str table: Name of the table to edit.
+        :param int my_id: Specifies row to edit; most commonly the numerical
+                          ID (primary key) but also supports string matching
+                          on other columns as provided by :meth:`getEntry`.
+        :param str column: name of column to edit
+        :param str my_str: String to add or replace. (Optional; required with
+                           ``ins_after``, ``ins_before``, ``replace_str``).
+        :param str after_flag: Only replace string in words immediately
+                               following this word. Only supported in
+                               ``arguments`` column of ``code`` table
+                               (optional; default: replace in all).
+        :param str ins_after: Value to insert ``my_str`` after.
+                              (Optional; conflicts with ``ins_before``,
+                              ``replace_str``, ``combine``).
+        :param str ins_before: Value to insert ``my_str`` before.
+                               (Optional; conflicts with ``ins_after``,
+                               ``replace_str``, ``combine``).
+        :param str replace_str: Value to replace with ``my_str``.
+                                (Optional; conflicts with ``ins_after``,
+                                ``ins_before``, ``combine``).
+        :param bool combine: If true, combine all instances of words after
+                             the word in ``after_flag``. (Optional;
+                             conflicts with ``ins_after``, ``ins_before``,
+                             ``replace_str``).
+        :raises ValueError: for any invalid combination of arguments.
+        :raises RuntimeError: if multiple rows match ``my_id``.
+
+        :examples:
+
+        All examples assume an open :class:`DButils` instance in ``dbu`` and
+        an existing code of ID 1. These examples use command line flags
+        but the treatment of strings is general.
+
+        >>> #Replace a string after a flag
+        >>> code = dbu.getEntry('Code', 1)
+        >>> code.arguments = '-i foobar -j foobar -k foobar'
+        >>> dbu.editTable('code', 1, 'arguments', my_str='baz',
+        ...               replace_str='bar', after_flag='-j')
+        >>> code.arguments
+        -i foobar -j foobaz -k foobar
+
+        >>> #Combine multiple instances of a flag into one
+        >>> code = dbu.getEntry('Code', 1)
+        >>> code.arguments = '-i foo -i bar -j baz'
+        >>> dbu.editTable('code', 1, 'arguments', after_flag='-i',
+        ...               combine=True)
+        >>> code.arguments
+        -i foo,bar -j baz
+
+        >>> #Append a string to every instance
+        >>> code = dbu.getEntry('Code', 1)
+        >>> code.relative_path = 'scripts'
+        >>> dbu.editTable('code', 1, 'relative_path', ins_after='scripts',
+        ...               my_str='2.0')
+        >>> code.relative_path
+        scripts2.0
+        """
+        DBlogging.dblogger.debug("Entered edit_table: my_id={0}".format(my_id))
+        table = table.title()
+        if not ins_after and not ins_before and not replace_str and not combine:
+            raise ValueError('Nothing to be done.')
+        if not combine and (sum(item is not None for item in
+                                [ins_after, ins_before, replace_str]) != 1):
+            raise ValueError('Only use one of ins_after, '
+                             'ins_before, and replace_str.')
+        if (ins_after or ins_before or replace_str) and not my_str:
+            raise ValueError('Need my_str.')
+        if combine and (sum(item is not None for item in \
+                            [ins_after, ins_before, replace_str]) != 0):
+            raise ValueError('Combine flag cannot be used with'
+                             ' ins_after, ins_before, or replace_str.')
+        if combine and my_str:
+            raise ValueError('Do not need my_str with combine.')
+        if after_flag and (column != 'arguments' or table != 'Code'):
+            raise ValueError('Only use after_flag with arguments column'
+                             ' in Code table.')
+        if combine and not after_flag:
+            raise ValueError('Must specify after_flag with combine.')
+
+        try:
+            entry = self.getEntry(table, my_id)
+        except InvalidRequestError: #multiple matches for my_id, usually
+            raise RuntimeError('Multiple rows match {}'.format(my_id))
+        original = getattr(entry, column)
+        if original is None: #nothing to do
+            return
+
+        if ins_before:
+            old_str = ins_before
+            new_str = my_str + ins_before
+        elif ins_after:
+            old_str = ins_after
+            new_str = ins_after + my_str
+        else:
+            old_str = replace_str
+            new_str = my_str
+
+        if after_flag and original:
+            parts = original.split()
+            if combine:
+                if parts.count(after_flag) > 1:
+                    indices = [ii for ii in range(len(parts))
+                               if parts[ii] == after_flag]
+                    # go backwards so don't mess up order when deleting
+                    for ii in range(len(indices) - 1, 0, -1):
+                        parts[indices[0] + 1] = parts[indices[0] + 1] + ',' \
+                                              + parts[indices[ii] + 1]
+                        del parts[indices[ii] + 1]
+                        del parts[indices[ii]]
+            elif after_flag in parts: #combine is false
+                for i, x in enumerate(parts[:-1]):
+                    if x == after_flag:
+                        parts[i + 1] = parts[i + 1].replace(old_str, new_str)
+            setattr(entry, column, ' '.join(parts))
+        else: #no after_flag provided, or the column is empty in db
+            setattr(entry, column, original.replace(old_str, new_str))
+            
+        self.commitDB()
+
+    def addUnixTimeTable(self):
+        """Add a table containing a file's Unix start/stop time.
+
+        Used for migrating databases; doing file searches based on the
+        Unix time is faster than the UTC timestamp. This will also
+        populate the time columns from a file's UTC start/stop time.
+
+        Raises
+        ------
+        RuntimeError
+            If the Unix time table already exists
+        """
+        if hasattr(self, 'Unixtime'):
+            raise RuntimeError('Unixtime table already seems to exist.')
+        unixtime = sqlalchemy.Table(
+            'unixtime', self.metadata,
+            sqlalchemy.Column(
+                'file_id', sqlalchemy.Integer,
+                sqlalchemy.ForeignKey('file.file_id'),
+                primary_key=True, index=True),
+            sqlalchemy.Column('unix_start', sqlalchemy.Integer, index=True),
+            sqlalchemy.Column('unix_stop', sqlalchemy.Integer, index=True),
+            sqlalchemy.CheckConstraint('unix_start <= unix_stop'),
+        )
+        self.metadata.create_all(tables=[unixtime])
+        # Make object for the new table definition (skips existing tables)
+        self._createTableObjects()
+        unx0 = datetime.datetime(1970, 1, 1)
+        for f in self.getFiles(): # Populate the times
+            r = self.Unixtime()
+            r.file_id = f.file_id
+            r.unix_start = int((f.utc_start_time - unx0)\
+                               .total_seconds()) # Round down
+            r.unix_stop = int(math.ceil((f.utc_stop_time - unx0)\
+                                        .total_seconds())) # Round up
+            self.session.add(r)
+        self.commitDB()
+>>>>>>> upstream/master
