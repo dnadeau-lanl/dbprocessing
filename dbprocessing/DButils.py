@@ -37,7 +37,6 @@ from . import DBstrings
 from . import Version
 from . import Utils
 from . import __version__
-from __init__ import __version__
 
 
 #########################################################
@@ -109,12 +108,21 @@ class DButils(object):
             self._patchProcessQueue()
         except AttributeError:
             raise (AttributeError('{0} is not a valid database'.format(mission)))
-
-        self.MissionDirectory = self.getMissionDirectory(self.mission)
-        self.CodeDirectory = self.getCodeDirectory(self.mission)
-        self.InspectorDirectory = self.getInspectorDirectory(self.mission)
-        self.instrument_id = self.getInstrumentID(self.instrument)
         self.mission_id = self.getMissionID(self.mission)
+
+        if engine == 'sqlite':
+            self.MissionDirectory = self.getMissionDirectory()
+            self.CodeDirectory = self.getCodeDirectory()
+            self.InspectorDirectory = self.getInspectorDirectory()
+            self.instrument_id = self.getInstrumentID(self.instrument)
+
+        else:
+            self.MissionDirectory = self.getMissionDirectory(self.mission)
+            self.CodeDirectory = self.getCodeDirectory(self.mission)
+            self.InspectorDirectory = self.getInspectorDirectory(self.mission)
+            self.instrument_id = self.getInstrumentID(self.instrument)
+            self.mission_id = self.getMissionID(self.mission)
+
         #print("instrument ID: {1}".format(self.instrument_id))
     # added on June-21-2018
     # def init_db(self, user, password, db, host='swx9.lanl.gov', port=5432, verbose=False):
@@ -655,7 +663,7 @@ class DButils(object):
         #        pqid = self.session.query(self.Processqueue.file_id).all()
         return outval
 
-    def _processqueueRawadd(self, fileid, version_bump=None):
+    def _processqueueRawadd(self, fileid, version_bump=None, commit=True):
         """
         raw add file ids to the process queue
         *** this might break things if an id is added that does not exist
@@ -686,8 +694,12 @@ class DButils(object):
             for f in files_to_add:
                 pq1 = self.Processqueue()
                 pq1.file_id = f
+                pq1.version_bump = version_bump
                 pq1.instrument_id = self.instrument_id
                 self.session.add(pq1)
+
+            if commit:
+                self.commitDB()  # commit once for all the adds
                 DBlogging.dblogger.debug(
                     "File added to process queue {0}:{1}".format(fileid, '---'))
             self.commitDB()  # commit once for all the adds
@@ -1134,7 +1146,9 @@ class DButils(object):
     def addproductprocesslink(self,
                               input_product_id,
                               process_id,
-                              optional):
+                              optional,
+                              yesterday=0,
+                              tomorrow=0):
         """
         Add a product process link to the database
 
@@ -1142,11 +1156,19 @@ class DButils(object):
         :type input_product_id: int
         :param process_id: id of the process to link
         :type process_id: int
+        :param yesterday: How many extra days back do you need
+        :type yesterday: int
+        :param tomorrow: How many extra days forward do you need
+        :type tomorrow: int
         """
         ppl1 = self.Productprocesslink()
         ppl1.input_product_id = self.getProductID(input_product_id)
         ppl1.process_id = self.getProcessID(process_id)
         ppl1.optional = optional
+        #Backwards compatability with old databases
+        if hasattr(ppl1, 'yesterday'):
+            ppl1.yesterday = yesterday;
+            ppl1.tomorrow = tomorrow;
         self.session.add(ppl1)
         self.commitDB()
         return ppl1.input_product_id, ppl1.process_id
@@ -1853,7 +1875,7 @@ class DButils(object):
                      for v in self.getFilesByProductDate(fe.product_id, [fe.utc_file_date] * 2, newest_version=True))
         return list(newest.intersection(invals))
 
-    def getInputProductID(self, process_id):
+    def getInputProductID(self, process_id, range=False):
         """
         Return the fileID for the input filename
 
@@ -1863,8 +1885,19 @@ class DButils(object):
         :return: list of input_product_ids
         :rtype: list
         """
-        sq = self.session.query(self.Productprocesslink.input_product_id, self.Productprocesslink.optional).filter_by(
-            process_id=process_id).all()
+        columns = [self.Productprocesslink.input_product_id,
+                   self.Productprocesslink.optional]
+        if range:
+            columns.extend(
+                [self.Productprocesslink.yesterday,
+                 self.Productprocesslink.tomorrow]
+                if hasattr(self.Productprocesslink, 'yesterday') else
+                [sqlalchemy.sql.expression.literal(0).label('yesterday'),
+                 sqlalchemy.sql.expression.literal(0).label('tomorrow')]
+            )
+        sq = self.session.query(*columns).filter_by(process_id=process_id).all()
+        #sq = self.session.query(self.Productprocesslink.input_product_id, self.Productprocesslink.optional).filter_by(
+        #   process_id=process_id).all()
         return sq
 
     def getFiles(self,
@@ -1876,10 +1909,56 @@ class DButils(object):
                  instrument=None,
                  exists=None,
                  newest_version=False,
-                 limit=None):
+                 limit=None,
+                 startTime=None,
+                 endTime=None):
+
         # if a datetime.datetime comes in this does not work, make them datetime.date
         startDate = Utils.datetimeToDate(startDate)
         endDate = Utils.datetimeToDate(endDate)
+
+        files = self.session.query(self.File)
+
+        if product is not None:
+            files = files.filter_by(product_id=product)
+
+        if level is not None:
+            files = files.filter_by(data_level=level)
+
+        if exists is not None:
+            files = files.filter_by(exists_on_disk=exists)
+
+        if code is not None:
+            files = files.join(self.Filecodelink, self.File.file_id == self.Filecodelink.resulting_file) \
+                .filter_by(source_code=code)
+
+        if instrument is not None:
+            files = files.join(self.Instrumentproductlink,
+                                self.File.product_id == self.Instrumentproductlink.product_id) \
+                .filter_by(instrument_id=instrument)
+
+        if startDate is not None:
+            if endDate is not None:
+                files = files.filter(self.File.utc_file_date.between(
+                    startDate, endDate))
+            else: # Start date only
+                files = files.filter(self.File.utc_file_date >= startDate)
+        elif endDate is not None: # End date only
+            files = files.filter(self.File.utc_file_date <= endDate)
+
+        if startTime is not None:
+            files = files.filter(self.File.utc_stop_time >= Utils.toDatetime(startTime))
+        if endTime is not None:
+            files = files.filter(self.File.utc_start_time <= Utils.toDatetime(endTime, end=True))
+
+        if newest_version:
+            files = files.order_by(self.File.interface_version, self.File.quality_version, self.File.revision_version)
+            x = files.limit(limit).all()
+
+            # Last item wins. https://stackoverflow.com/questions/39678672/is-a-python-dict-comprehension-always-last-wins-if-there-are-duplicate-keys
+            out = dict([((i.product_id, i.utc_file_date), i) for i in x])
+            return list(out.values())
+
 
         # BAL not ideal but a special case where product_id is set and startDate == endDate
         # 30 March 2017
@@ -1949,6 +2028,16 @@ class DButils(object):
                              endDate=max(daterange),
                              product=product_id,
                              newest_version=newest_version)
+
+    def getFilesByProductTime(self, product_id, daterange, newest_version=False):
+        """
+        Return the files in the db by product id with any data in range specified
+        """
+        return self.getFiles(startTime=min(daterange),
+                             endTime=max(daterange),
+                             product=product_id,
+                             newest_version=newest_version)
+
 
     def getFilesByDate(self, daterange, newest_version=False):
         """
@@ -2088,7 +2177,7 @@ class DButils(object):
         code = self.getEntry('Code', code_id)
         if not code.active_code:  # not an active code
             return None
-        return os.path.join(self.CodeDirectory, code.relative_path, code.filename)
+        return os.path.join(self.getCodeDirectory(code_id), code.relative_path, code.filename)
 
     def getCodeVersion(self, code_id):
         """

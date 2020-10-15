@@ -15,6 +15,7 @@ from optparse import OptionParser
 
 from sqlalchemy import schema, types
 from sqlalchemy.engine import create_engine
+from sqlalchemy.sql import func
 
 from dbprocessing import DButils
 
@@ -206,6 +207,8 @@ class dbprocessing_db(object):
                                                 schema.ForeignKey('file.file_id'),
                                                 primary_key=True, nullable=False, unique=True, index=True),
                                   schema.Column('version_bump', types.SmallInteger, nullable=True),
+                                  schema.Column('instrument_id', types.Integer,
+                                                schema.ForeignKey('instrument.instrument_id'), nullable=False),
                                   schema.CheckConstraint('version_bump is NULL or version_bump < 3'),
                                   )
 
@@ -222,6 +225,18 @@ class dbprocessing_db(object):
                                                 schema.ForeignKey('file.file_id'), nullable=False, ),
                                   schema.Column('release_num', types.String(20), nullable=False),
                                   schema.PrimaryKeyConstraint('file_id', 'release_num')
+                                  )
+
+        data_table = schema.Table('processpidlink', metadata,
+                                  schema.Column('ppl_id', types.Integer, autoincrement=True, primary_key=True,
+                                                nullable=False),
+                                  schema.Column('pid', types.Integer, nullable=True),
+                                  schema.Column('hostname', types.String(100), nullable=True),
+                                  schema.Column('process_id', types.Integer,
+                                                schema.ForeignKey('process.process_id'), nullable=True),
+                                  schema.Column('currentlyprocessing', types.Boolean, nullable=True, default='f'),
+                                  schema.Column('start_time', types.DateTime, nullable=True, default=func.now()),
+                                  schema.Column('end_time', types.DateTime, nullable=True, default=func.now())
                                   )
 
         data_table = schema.Table('logging', metadata,

@@ -10,13 +10,13 @@ import tempfile
 import time
 import traceback
 
-import DBlogging
-import DBstrings
-import DButils
-from inspector import extract_Version
-import Utils
-from Utils import dateForPrinting as DFP
-import Version
+from . import DBlogging
+from . import DBstrings
+from . import DButils
+from .inspector import extract_Version
+from . import Utils
+from .Utils import dateForPrinting as DFP
+from . import Version
 
 
 runObj = namedtuple('runObj', 'runme time probfile')
@@ -200,7 +200,7 @@ def runner(runme_list, dbu, MAX_PROC=20, rundir=None):
     runme_list = remove_dups(outfiles, runme_list)
     for runme in runme_list:
         DBlogging.dblogger.info("runme PID: {0} \n Command: {1} starting".format(runme.process_id, ' '.join(runme.cmdline)[:200]))
-       
+
     print("{0} len(runme_list)={1}".format(DFP(), len(runme_list)))
 
 
@@ -287,7 +287,7 @@ def runner(runme_list, dbu, MAX_PROC=20, rundir=None):
             if p.poll() is None: # still running
                 continue
             # OK process done, get the info from the dict
-            rm, t, fp = processes[p] 
+            rm, t, fp = processes[p]
             rm.dbu.updateAllsubprocessLogging(rm.process_id)
             #...
 
@@ -340,7 +340,7 @@ class runMe(object):
     input_files - the files that exist to run with (list of int)
     pq - processqueue instance
     """
-    def __init__(self, dbu, utc_file_date, process_id, input_files, pq, force=False):
+    def __init__(self, dbu, utc_file_date, process_id, input_files, pq, version_bump = None, force=False):
         #DBlogging.dblogger.debug("Entered runMe {0}, {1}, {2}, {3}".format(dbu, utc_file_date, process_id, input_files))
         if isinstance(utc_file_date, datetime.datetime):
             utc_file_date = utc_file_date.date()
@@ -354,6 +354,7 @@ class runMe(object):
         self.utc_file_date = utc_file_date
         self.process_id = process_id
         self.input_files = input_files
+        self.version_bump = version_bump
         # since we have a process do we have a code that does it?
         self.code_id = self.dbu.getCodeFromProcess(process_id, utc_file_date)
         if self.code_id is None: # there is no code to actually run we are done
@@ -367,7 +368,14 @@ class runMe(object):
             DBlogging.dblogger.debug("The same process is running, can't run")
             return
 
+        # get code version string
+        version = self.dbu.getCodeVersion(self.code_id)
+        version_st = '{}.{}.{}'.format(version.interface, version.quality,\
+                                       version.revision)
+
         DBlogging.dblogger.debug("Going to run code: {0}:{1}".format(self.code_id, self.codepath))
+        self.codepath = self.codepath.replace('{CODEVERSION}',version_st)
+        self.codedir = os.path.dirname(self.codepath)
 
         process_entry = self.dbu.getEntry('Process', self.process_id)
         code_entry = self.dbu.getEntry('Code', self.code_id)
@@ -417,6 +425,16 @@ class runMe(object):
                     f_id_db = False
                 if not f_id_db: # if the file is not in the db lets make it
                     break # lets call this the only way out of here that creates the runner
+                if self.version_bump == 0:
+                    self.output_version.incInterface()
+                    continue
+                if self.version_bump == 1:
+                    self.output_version.incQuality()
+                    continue
+                if self.version_bump == 2:
+                    self.output_version.incRevision()
+                    continue
+
                 codechange = self._codeVerChange(f_id_db)
                 if codechange: # if the code did change maybe we have a unique
                     DBlogging.dblogger.debug("Code did change for file: {0}".format(self.filename))
@@ -437,14 +455,20 @@ class runMe(object):
         args = process_entry.extra_params
         if args is not None:
             args = args.replace('{DATE}', utc_file_date.strftime('%Y%m%d'))
+            args = args.replace('{ROOTDIR}', self.dbu.MissionDirectory)
+            args = args.replace('{CODEDIR}','{}'.format(self.codedir))
+            args = args.replace('{CODEVERSION}','{}'.format(version_st))
             args = args.split('|')
             self.extra_params = args
 
         ## get arguments from the code
         args = code_entry.arguments
         if args is not None:
+            args = args.replace('{DATE}', utc_file_date.strftime('%Y%m%d'))
+            args = args.replace('{ROOTDIR}', self.dbu.MissionDirectory)
+            args = args.replace('{CODEDIR}','{}'.format(self.codedir))
+            args = args.replace('{CODEVERSION}','{}'.format(version_st))
             args = Utils.dirSubs(args, infile.filename, utc_file_date, infile.utc_start_time, 0.0, dbu=self.dbu)
-            #args = args.replace('{DATE}', utc_file_date.strftime('%Y%m%d'))
             args = args.split()
             for arg in args:
                 if 'input' not in arg and 'output' not in arg:

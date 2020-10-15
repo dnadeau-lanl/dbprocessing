@@ -1,11 +1,16 @@
 from __future__ import division
 from __future__ import print_function
 
+
+from functools import total_ordering
+
+
+
 class VersionError(Exception):
     """Error class for Version that calls out that an invalid version has been specified"""
     pass
 
-
+@total_ordering
 class Version(object):
     """
     A version class to simplify pushing around version information
@@ -67,10 +72,11 @@ class Version(object):
     def fromString(inval):
         """
         Given a string of the form x.y.z return a Version object
-        
+
         :param inval: String in the form xx.yy.zz
         :type inval: str
         :return: Version instance created from the string
+        :rtype: :class:`Version`
         :rtype: Version
 
         """
@@ -107,6 +113,25 @@ class Version(object):
         """Increment the revision version"""
         self.revision += 1
         self._checkVersion()
+
+    def __eq__(self, other):
+        return ((self.interface, self.quality, self.revision) == \
+                (other.interface, other.quality, other.revision))
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __lt__(self, other):
+        return ((self.interface, self.quality, self.revision) < \
+                (other.interface, other.quality, other.revision))
+
+    def __sub__(self, other):
+        """
+        Subtract works on each version number
+        :param other: The other Version object
+        :type other: Version
+        """
+        return [self.interface - other.interface, self.quality - other.quality, self.revision - other.revision]
 
     def __cmp__(self, other):
         left = (self.interface, self.quality, self.revision)
