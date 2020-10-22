@@ -212,7 +212,7 @@ class DBUtilsOtherTests(TestSetup):
         self.assertEqual('Nothing to do', self.dbu._nameSubInspector('Nothing to do', 1))
         # repl = ['{INSTRUMENT}', '{SPACECRAFT}', '{SATELLITE}', '{MISSION}', '{PRODUCT}', '{LEVEL}', '{ROOTDIR}']
         self.assertEqual('rbsp-a_magnetometer_uvw_emfisis-Quick-Look', self.dbu._nameSubInspector('{PRODUCT}', 1))
-        self.assertEqual('mageis', self.dbu._nameSubInspector('{INSTRUMENT}', 10))
+        self.assertEqual('mageis', self.dbu._nameSubInspector('{INSTRUMENT}', g))
         self.assertEqual('rbspa', self.dbu._nameSubInspector('{SATELLITE}', 1))
         self.assertEqual('rbspa', self.dbu._nameSubInspector('{SPACECRAFT}', 1))
         self.assertEqual('rbsp', self.dbu._nameSubInspector('{MISSION}', 1))
@@ -677,7 +677,7 @@ class DBUtilsGetTests(TestSetup):
         val = self.dbu.getFilesByDate([datetime.date(2013, 9, 10)] * 2, newest_version=True)
         self.assertEqual(129, len(val))
         filenames = sorted([v.filename for v in val])
-        ans = [u'ect_rbspa_0377_344_02.ptp.gz', 
+        ans = [u'ect_rbspa_0377_344_02.ptp.gz',
                u'ect_rbspa_0377_345_01.ptp.gz']
         self.assertEqual(ans, filenames[:len(ans)])
 
@@ -720,12 +720,12 @@ class DBUtilsGetTests(TestSetup):
         val = self.dbu.getActiveInspectors()
         self.assertEqual(190, len(val))
         v2 = set([v[0] for v in val])
-        ans = set([u'/n/space_data/cda/rbsp/codes/inspectors/ect_L05_V1.0.0.py',
-                   u'/n/space_data/cda/rbsp/codes/inspectors/ect_L0_V1.0.0.py',
-                   u'/n/space_data/cda/rbsp/codes/inspectors/ect_L1_V1.0.0.py',
-                   u'/n/space_data/cda/rbsp/codes/inspectors/ect_L2_V1.0.0.py',
-                   u'/n/space_data/cda/rbsp/codes/inspectors/emfisis_V1.0.0.py',
-                   u'/n/space_data/cda/rbsp/codes/inspectors/rbsp_pre_MagEphem_insp.py'])
+        ans = set([u'/n/space_data/cda/rbsp/mageis_inspector/codes/inspectors/ect_L05_V1.0.0.py',
+                   u'/n/space_data/cda/rbsp/mageis_inspector/codes/inspectors/ect_L0_V1.0.0.py',
+                   u'/n/space_data/cda/rbsp/mageis_inspector/codes/inspectors/ect_L1_V1.0.0.py',
+                   u'/n/space_data/cda/rbsp/mageis_inspector/codes/inspectors/ect_L2_V1.0.0.py',
+                   u'/n/space_data/cda/rbsp/mageis_inspector/codes/inspectors/emfisis_V1.0.0.py',
+                   u'/n/space_data/cda/rbsp/mageis_inspector/codes/inspectors/rbsp_pre_MagEphem_insp.py'])
         self.assertEqual(ans, v2)
         v3 = set([v[-1] for v in val])
         self.assertEqual(set(range(1, 191)), v3)
@@ -767,7 +767,7 @@ class DBUtilsGetTests(TestSetup):
 
     def test_getCodePath(self):
         """getCodePath"""
-        self.assertEqual('/n/space_data/cda/rbsp/codes/l05_to_l1.py',
+        self.assertEqual('/n/space_data/cda/rbsp/mageis_code/codes/l05_to_l1.py',
                          self.dbu.getCodePath(1))
         self.assertRaises(DButils.DBNoData, self.dbu.getCodePath, 'badval')
 
@@ -803,18 +803,18 @@ class DBUtilsGetTests(TestSetup):
 
     def test_getCodeDirectory(self):
         """getCodeDirectory"""
-        self.assertEqual(self.dbu.getCodeDirectory(), '/n/space_data/cda/rbsp')
-        
+        self.assertEqual(self.dbu.getCodeDirectory(), '/n/space_data/cda/rbsp/mageis_code')
+
     def test_getInspectorDirectory(self):
         """getInspectorDirectory"""
         self.assertEqual(self.dbu.getInspectorDirectory(),
                          '/n/space_data/cda/rbsp')
 
     def test_getDirectory(self):
-        self.assertEqual(self.dbu.getDirectory('codedir'), None)
+        self.assertEqual(self.dbu.getDirectory('codedir'), u'/n/space_data/cda/rbsp/mageis_code')
         self.assertEqual(self.dbu.getDirectory('inspector_dir'), None)
-        self.assertEqual(self.dbu.getDirectory('incoming_dir'), '/n/space_data/cda/rbsp/mageis_incoming') 
-        
+        self.assertEqual(self.dbu.getDirectory('incoming_dir'), '/n/space_data/cda/rbsp/mageis_incoming')
+
     def test_getIncomingPath(self):
         """getIncomingPath"""
         self.assertEqual(self.dbu.getIncomingPath(), '/n/space_data/cda/rbsp/mageis_incoming')
@@ -822,7 +822,7 @@ class DBUtilsGetTests(TestSetup):
     def test_getErrorPath(self):
         """getErrorPath"""
         self.assertEqual(self.dbu.getErrorPath(),
-                         '/n/space_data/cda/rbsp/errors')
+                         u'/n/space_data/cda/rbsp/mageis_error/errors')
 
     def test_getFilecodelink_byfile(self):
         """getFilecodelink_byfile"""
@@ -986,7 +986,7 @@ class DBUtilsGetTestsNoOpen(TestSetupNoOpen):
         self.dbu = DButils.DButils(self.sqlworking)
         self.assertEqual(self.dbu.getCodeDirectory(),
                          '/n/space_data/cda/rbsp/codedir')
-        
+
     def test_getCodeDirectoryRelSpecified(self):
         #https://stackoverflow.com/questions/7300948/add-column-to-sqlalchemy-table
         connection = sqlite3.connect(self.sqlworking)
@@ -999,7 +999,7 @@ class DBUtilsGetTestsNoOpen(TestSetupNoOpen):
         self.dbu = DButils.DButils(self.sqlworking)
         self.assertEqual(self.dbu.getCodeDirectory(),
                          '/n/space_data/cda/rbsp/codedir')
-     
+
     def test_getCodeDirectorySpecifiedBlank(self):
         connection = sqlite3.connect(self.sqlworking)
         cursor = connection.cursor()
@@ -1620,13 +1620,13 @@ class TestWithtestDB(unittest.TestCase):
         """Tests all of the release stuff, it's all intertwined anyway"""
         self.dbu.tag_release(1)
 
-        ans = set(['testDB_001_001.raw', 'testDB_000_001.raw', 
+        ans = set(['testDB_001_001.raw', 'testDB_000_001.raw',
                    'testDB_001_000.raw', 'testDB_000_000.raw',
-                   'testDB_2016-01-02.cat', 'testDB_2016-01-04.cat', 
-                   'testDB_2016-01-03.cat', 'testDB_2016-01-01.cat', 
-                   'testDB_2016-01-04.rot', 'testDB_2016-01-05.cat', 
-                   'testDB_2016-01-05.rot', 'testDB_2016-01-02.rot', 
-                   'testDB_2016-01-01.rot', 'testDB_2016-01-03.rot', 
+                   'testDB_2016-01-02.cat', 'testDB_2016-01-04.cat',
+                   'testDB_2016-01-03.cat', 'testDB_2016-01-01.cat',
+                   'testDB_2016-01-04.rot', 'testDB_2016-01-05.cat',
+                   'testDB_2016-01-05.rot', 'testDB_2016-01-02.rot',
+                   'testDB_2016-01-01.rot', 'testDB_2016-01-03.rot',
                    'testDB_000_002.raw', 'testDB_000_003.raw'])
         self.assertEqual(ans, set(self.dbu.list_release(1, fullpath=False)))
         # Test additional release options
@@ -1635,20 +1635,20 @@ class TestWithtestDB(unittest.TestCase):
 
     def test_getAllFilenames_all(self):
         """getAllFilenames should return all files in the db when passed no filters"""
-        ans = sorted(['testDB_001_001.raw', 'testDB_000_001.raw', 
+        ans = sorted(['testDB_001_001.raw', 'testDB_000_001.raw',
                    'testDB_001_000.raw', 'testDB_000_000.raw',
-                   'testDB_2016-01-02.cat', 'testDB_2016-01-04.cat', 
-                   'testDB_2016-01-03.cat', 'testDB_2016-01-01.cat', 
-                   'testDB_2016-01-04.rot', 'testDB_2016-01-05.cat', 
-                   'testDB_2016-01-05.rot', 'testDB_2016-01-02.rot', 
-                   'testDB_2016-01-01.rot', 'testDB_2016-01-03.rot', 
+                   'testDB_2016-01-02.cat', 'testDB_2016-01-04.cat',
+                   'testDB_2016-01-03.cat', 'testDB_2016-01-01.cat',
+                   'testDB_2016-01-04.rot', 'testDB_2016-01-05.cat',
+                   'testDB_2016-01-05.rot', 'testDB_2016-01-02.rot',
+                   'testDB_2016-01-01.rot', 'testDB_2016-01-03.rot',
                    'testDB_000_002.raw', 'testDB_000_003.raw'])
 
         self.assertEqual(ans, sorted(self.dbu.getAllFilenames(fullPath = False)))
 
     def test_getAllFilenames_product(self):
         """getAllFilenames should return the files with product_id 1"""
-        ans = sorted(['testDB_2016-01-01.cat', 'testDB_2016-01-02.cat', 
+        ans = sorted(['testDB_2016-01-01.cat', 'testDB_2016-01-02.cat',
                'testDB_2016-01-03.cat', 'testDB_2016-01-04.cat',
                'testDB_2016-01-05.cat'])
 
@@ -1657,7 +1657,7 @@ class TestWithtestDB(unittest.TestCase):
 
     def test_getAllFilenames_level(self):
         """getAllFilenames should return the files with level 0"""
-        ans = sorted(['testDB_001_001.raw', 'testDB_001_000.raw', 
+        ans = sorted(['testDB_001_001.raw', 'testDB_001_000.raw',
                 'testDB_000_001.raw', 'testDB_000_000.raw',
                 'testDB_000_002.raw', 'testDB_000_003.raw'])
 
@@ -1666,8 +1666,8 @@ class TestWithtestDB(unittest.TestCase):
 
     def test_getAllFilenames_code(self):
         """getAllFilenames should return the files with code 1"""
-        ans = sorted(['testDB_2016-01-02.cat', 'testDB_2016-01-04.cat', 
-               'testDB_2016-01-03.cat', 'testDB_2016-01-01.cat', 
+        ans = sorted(['testDB_2016-01-02.cat', 'testDB_2016-01-04.cat',
+               'testDB_2016-01-03.cat', 'testDB_2016-01-01.cat',
                'testDB_2016-01-05.cat'])
 
         self.assertEqual(ans, sorted(self.dbu.getAllFilenames(fullPath = False,
@@ -1675,13 +1675,13 @@ class TestWithtestDB(unittest.TestCase):
 
     def test_getAllFilenames_instrument(self):
         """getAllFilenames should return the files with instrument 1"""
-        ans = sorted(['testDB_001_001.raw', 'testDB_000_001.raw', 
+        ans = sorted(['testDB_001_001.raw', 'testDB_000_001.raw',
                 'testDB_001_000.raw', 'testDB_000_000.raw',
-                'testDB_2016-01-02.cat', 'testDB_2016-01-04.cat', 
-                'testDB_2016-01-03.cat', 'testDB_2016-01-01.cat', 
-                'testDB_2016-01-04.rot', 'testDB_2016-01-05.cat', 
-                'testDB_2016-01-05.rot', 'testDB_2016-01-02.rot', 
-                'testDB_2016-01-01.rot', 'testDB_2016-01-03.rot', 
+                'testDB_2016-01-02.cat', 'testDB_2016-01-04.cat',
+                'testDB_2016-01-03.cat', 'testDB_2016-01-01.cat',
+                'testDB_2016-01-04.rot', 'testDB_2016-01-05.cat',
+                'testDB_2016-01-05.rot', 'testDB_2016-01-02.rot',
+                'testDB_2016-01-01.rot', 'testDB_2016-01-03.rot',
                 'testDB_000_002.raw', 'testDB_000_003.raw'])
 
         self.assertEqual(ans, sorted(self.dbu.getAllFilenames(fullPath = False,

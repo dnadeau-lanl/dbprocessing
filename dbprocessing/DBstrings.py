@@ -19,7 +19,7 @@ class DBformatter(string.Formatter):
                           a fully-formatted representation of the field
                           and a regular expression that should match it.
     :type SPECIAL_FIELDS: dict
-    
+
     .. note:: As this is currently implemented, L{regex} may not handle
        {{ and }} properly, since regex expansion is applied I{after}
        the basic formatting is done, and thus {{ and }} are already
@@ -46,8 +46,11 @@ class DBformatter(string.Formatter):
         'MILLI': ('{MILLI:03d}', '\d{3}'),
         'MICRO': ('{MICRO:03d}', '\d{3}'),
         'QACODE': ('{QACODE}', 'ok|ignore|problem'),
-        'VERSION': ('{VERSION}', '\d\.\d\.\d'),
+        'VERSION': ('{VERSION}', '\d+\.\d+\.\d+'),
         'DATE': ('{DATE}', '(19|2\d)\d\d(0\d|1[0-2])[0-3]\d'),
+        'datetime': ('{datetime}', '(19|2\d)\d\d(0\d|1[0-2])[0-3]\d'),
+        'mday': ('{mday:d}', '-?\d+'),
+        'APID': ('{APID:x}', '[\da-fA-F]+'),
         '??': ('{??}', '..'),
         '???': ('{???}', '...'),
         '????': ('{????}', '....'),

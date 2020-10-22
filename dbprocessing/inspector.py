@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
 from __future__ import print_function
 
 """
@@ -31,9 +32,10 @@ import os
 import re
 import warnings
 
-import DBlogging
-import Diskfile
-import Version
+from . import DBlogging
+from . import Diskfile
+from . import Version
+from . import DBstrings
 
 def EphemeralCallable(basetype=type):
     def _new_caller(cls, *args, **kwargs):
@@ -51,6 +53,32 @@ def EphemeralCallable(basetype=type):
                  '__ephemeral_encapsulated__': encaps})
     return _EphemeralMetaclass
 
+
+class DefaultFields(dict):
+    """Dict-like with defaults for the special fields used by DBformatter
+    Any key not present returns a value that maintains the key reference
+    and provides a match-all regex.
+    """
+    def __missing__(self, key):
+        """Key not found, so return format-able key and match-all regex."""
+        return ('{{{0}}}'.format(key), '.*')
+
+    def __contains__(self, key):
+        """Pretends key is always there, so always gets value, or default."""
+        # The parser returns a spurious None for field name at end
+        # of format string, so don't pretend we have a key for that.
+        return key is not None
+
+
+class DefaultFormatter(DBstrings.DBformatter):
+    """Formatter that passes through any missing fields
+    Basically does a match-all for constructing a regex. expand_format
+    will also pass through the field name, but this will still fail
+    on the final format() call.
+    """
+    # Data, not callable, can't use super.
+    SPECIAL_FIELDS = DefaultFields(DBstrings.DBformatter.SPECIAL_FIELDS)
+
 class inspector(object):
     """
     ABC for inspectors to be sure the user has implemented what is required
@@ -66,6 +94,9 @@ class inspector(object):
         self.basename = os.path.basename(self.filename)
         self.dirname = os.path.dirname(self.filename)
         self.product = product
+        self.filenameformat = self.dbu.getEntry('Product', self.product).format
+        DBformatter = DefaultFormatter() #must instantiate class
+        self.filenameregex = DBformatter.re(self.filenameformat)
         self.diskfile = Diskfile.Diskfile(self.filename, self.dbu)
         insp = self.inspect(kwargs)
         if insp is None:

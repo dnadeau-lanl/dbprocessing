@@ -48,6 +48,21 @@ def check_unix_time(dbu):
     """
     return not hasattr(dbu, 'Unixtime')
 
+def check_processpidlink(dbu):
+    """Check if database needs a table for Process PID link
+
+    Parameters
+    ==========
+    dbu : dbprocessing.DButils.DButils
+        Open DButils instances for the mission to update
+
+    Returns
+    =======
+    bool
+        True if update needed (there is no Unix time table);
+        False otherwise (Unix time table exists)
+    """
+    return not hasattr(dbu, 'processpidlink')
 
 def do_unix_time(dbu):
     """Add Unix time table to database
@@ -59,9 +74,19 @@ def do_unix_time(dbu):
     """
     dbu.addUnixTimeTable()
 
+def do_processpidlink(dbu):
+    """Add Unix time table to database
+
+    Parameters
+    ==========
+    dbu : dbprocessing.DButils.DButils
+        Open DButils instances for the mission to update
+    """
+    dbu.addProcessPIDLinkTable()
 
 checkme = [
-    ("Unix time table", check_unix_time, do_unix_time)
+    ("Unix time table", check_unix_time, do_unix_time),
+    ("Process PID Link Table", check_processpidlink, do_processpidlink)
 ]
 """List of all possible updates. tuple of name, function to check if needed,
    function to perform the update. Check functions take the open DBUtils and
@@ -85,6 +110,8 @@ def main(mission, always=False):
     needed = []
     """List of (name, function to perform update) for every update needed"""
     for name, checkfunc, dofunc in checkme:
+        import pdb
+        pdb.set_trace()
         dothis = checkfunc(dbu)
         print('{}: {}'.format(name, 'PENDING' if dothis else 'up to date'))
         if dothis:
@@ -111,7 +138,7 @@ def main(mission, always=False):
         do_func(dbu)
         print('done.')
     print('Complete.')
-            
+
 
 
 if __name__ == "__main__":
