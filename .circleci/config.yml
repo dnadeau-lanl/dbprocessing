@@ -40,7 +40,10 @@ jobs:
           password: $DOCKERHUB_PASSWORD 
         environment:
           DATABASE_URL: postgresql://root@localhost/circle_test?sslmode=disable
-      - image: circleci/postgres
+      - image: circleci/postgres:9.6.5-alpine-ram
+        auth:
+          username: $DOCKERHUB_USERNAME
+          password: $DOCKERHUB_PASSWORD 
     environment:
       POSTGRES_USER: root
       POSTGRES_DB: circle_test
