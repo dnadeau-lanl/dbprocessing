@@ -1992,9 +1992,6 @@ class DButils(object):
         else:
             # leave this on top so that we don;t have to repeat code inside the logic below
             # SQL runs group by before order by, so the ordering must be done in a subquery
-            stmt = self.session.query(self.File).order_by(self.File.interface_version) \
-                                                .order_by(self.File.quality_version) \
-                                                .order_by(self.File.revision_version).subquery()
 
             files = self.session.query(self.File)
 
@@ -2002,18 +1999,22 @@ class DButils(object):
             # which makes things a little faster on large databases
             if product is not None:
                 if newest_version:
-                    files = self.session.query() \
-                                .add_entity(self.File, alias=stmt) \
-                                .group_by(stmt.corresponding_column(self.File.utc_file_date))
+                    files  = files.order_by(self.File.interface_version) \
+                                                .order_by(self.File.quality_version) \
+                                                .order_by(self.File.revision_version) \
+                                                .group_by(self.File.utc_file_date)
+
                 else:
                     files = self.session.query(self.File)
                 files = files.filter_by(product_id=product)
 
             elif newest_version:
-                files = self.session.query() \
-                            .add_entity(self.File, alias=stmt) \
-                            .group_by(stmt.corresponding_column(self.File.product_id)) \
-                            .group_by(stmt.corresponding_column(self.File.utc_file_date))
+                                    files  = files.order_by(self.File.interface_version) \
+                                                .order_by(self.File.quality_version) \
+                                                .order_by(self.File.revision_version) \
+                                                .group_by(self.File.product_id) \
+                                                .group_by(self.File.utc_file_date)
+
             else:
                 files = self.session.query(self.File)
 

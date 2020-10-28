@@ -335,10 +335,10 @@ class BuildChildrenTests(ProcessQueueTestsBase):
         self.dbu.addFilefilelink(l1fid, l0fid)
         newfid = self.addFile('level_0_20120101_v1.1.0', l0pid)
         expected = [
-            ['{}/codes/scripts/junk.py'.format(self.td),
-            'level_0-1_args',
-             '{}/data/junk/level_0_20120101_v1.1.0'.format(self.td),
-             'level_1_20120101_v1.1.0'
+            [u'{}/codes/scripts/junk.py'.format(self.td),
+             u'level_0-1_args',
+             u'{}/data/junk/level_0_20120101_v1.1.0'.format(self.td),
+             u'level_1_20120101_v1.1.0'
             ],
 # Tomorrow-only is not made
 #            ['{}/codes/scripts/junk.py'.format(self.td),
